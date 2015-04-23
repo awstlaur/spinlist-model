@@ -17,10 +17,13 @@
 // Gets a node from an id. Use this everywhere.
 #define NODE(id) (nodes[(id)])
 
-#define CHECK_NODE_VALID(id) assert(NODE(id).this == id &&             \
+#define CHECK_NODE_VALID(id) assert(id >= 0 && id < NUM_NODES &&       \
+                                    NODE(id).this == id &&             \
                                     NODE(id).num_levels != NIL &&      \
                                     NODE(id).num_levels < NUM_LINKS && \
                                     NODE(id).num_levels >= 0)
+
+#define ASSERT_VALID_DATA(dat) assert(DATA_MIN <= (dat) && DATA_MAX >= (dat))
 
 // Waits for the list to be initialized. Must do this before performing actions.
 #define WAIT_FOR_INITIALIZATION  \
@@ -51,7 +54,7 @@
 typedef Node {
     NODE_ID this;
     NODE_ID link[NUM_LINKS];
-    bool marks[NUM_LINKS];
+    bool mark[NUM_LINKS];
     // Number of levels in this node, being set to NIL indicates this node is not initialized.
     int num_levels;
     int data;
@@ -99,4 +102,12 @@ proctype init_nodes() {
     }
     printf("Head is node %d\nTail is node %d\n", head, tail);
     initialized = true;
+}
+
+// Will search for the value, checking consistancy as it goes.
+// Will not return anything...
+proctype search(int value) {
+    ASSERT_VALID_DATA(value);
+    WAIT_FOR_INITIALIZATION;
+    // TODO
 }
