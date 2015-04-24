@@ -1,8 +1,5 @@
 // Each test case will #include this file and give their own init.
 
-// How many levels the spinlist has
-#define NUM_LINKS 3
-
 // Maximum number of nodes, Including -inf and +inf nodes
 #define NUM_NODES 12
 
@@ -18,10 +15,7 @@
 #define NODE(id) (nodes[(id)])
 
 #define CHECK_NODE_VALID(id) assert(id >= 0 && id < NUM_NODES &&       \
-                                    NODE(id).this == id &&             \
-                                    NODE(id).num_levels != NIL &&      \
-                                    NODE(id).num_levels < NUM_LINKS && \
-                                    NODE(id).num_levels >= 0)
+                                    NODE(id).this == id)
 
 #define ASSERT_VALID_DATA(dat) assert(DATA_MIN <= (dat) && DATA_MAX >= (dat))
 
@@ -35,12 +29,7 @@
 // Use this to stop the simulation.
 #define SHUTDOWN() shutdown = true
 
-#define DESTROY_INVALID_NODE(id)  \
-    NODE(id).num_levels = NIL;    \
-    for (a in NODE(id).link) {    \
-        NODE(id).link[a] = NIL;   \
-        NODE(id).mark[a] = false; \
-    }                             \
+#define DESTROY_INVALID_NODE(id)  \                         \
     assert(NODE(id).this == id);  \
     node_gen!id
 
@@ -48,15 +37,13 @@
     CHECK_NODE_VALID(id);         \
     DESTROY_INVALID_NODE(id)
 
-// What the link is set to if we do not have a next at that level.
+// uninitialized link
 #define NIL -1
 
 typedef Node {
     NODE_ID this;
-    NODE_ID link[NUM_LINKS];
-    bool mark[NUM_LINKS];
-    // Number of levels in this node, being set to NIL indicates this node is not initialized.
-    int num_levels;
+    NODE_ID link;
+    bool mark;
     int data;
 }
 
@@ -75,15 +62,10 @@ bool shutdown = false;
 proctype init_nodes() {
     assert(!initialized);
     NODE_ID cur = 0;
-    int lvl = 0;
     for (cur in nodes) {
         NODE(cur).this = cur;
-        NODE(cur).num_levels = NIL;
-        // Set all links to NIL
-        for (lvl in NODE(cur).link) {
-            NODE(cur).link[lvl] = NIL;
-            NODE(cur).mark[lvl] = false;
-        }
+        NODE(cur).link = NIL;
+        NODE(cur).mark = false;
         node_gen!cur;
     }
 
@@ -92,22 +74,37 @@ proctype init_nodes() {
     node_gen??eval(head);
     node_gen??eval(tail);
 
-    NODE(head).num_levels = NUM_LINKS;
-    NODE(tail).num_levels = NUM_LINKS;
+    NODE(head).link = tail;
     NODE(head).data = NEG_INF;
     NODE(tail).data = POS_INF;
-    // Link the head to the tail
-    for (lvl in NODE(head).link) {
-        NODE(head).link[lvl] = tail;
-    }
     printf("Head is node %d\nTail is node %d\n", head, tail);
     initialized = true;
 }
 
 // Will search for the value, checking consistancy as it goes.
 // Will not return anything...
-proctype search(int value) {
+proctype search(int value, bool sorted) {
     ASSERT_VALID_DATA(value);
     WAIT_FOR_INITIALIZATION;
-    // TODO
+    // TODO allight
+}
+
+proctype push(int value){
+    // TODO awstlaur
+}
+
+proctype pop(){
+    // TODO awstlaur
+}
+
+proctype append(int value){
+    // TODO awstlaur
+}
+
+proctype insert_sorted(int value){
+    // TODO allight
+}
+
+proctype remove_sorted(int value){
+    // TODO allight
 }

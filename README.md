@@ -1,2 +1,2 @@
 # spinlist-model
-Model of a lock-free concurrent skip-list in Promela/Spin.
+Model of a lock-free concurrent list in Promela/Spin.
