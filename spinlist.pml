@@ -108,3 +108,9 @@ proctype insert_sorted(int value){
 proctype remove_sorted(int value){
     // TODO allight
 }
+
+proctype check_sorted(){
+    atomic {
+        // TODO awstlaur
+    }
+}
