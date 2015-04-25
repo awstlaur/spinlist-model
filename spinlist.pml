@@ -1,9 +1,9 @@
-// Each test case will #include this file and give their own init.
+/* Each test case will #include this file and give their own init. */
 
-// Maximum number of nodes, Including -inf and +inf nodes
+/* Maximum number of nodes, Including -inf and +inf nodes */
 #define NUM_NODES 12
 
-// What we allow data in the list to be between
+/* What we allow data in the list to be between */
 #define DATA_MIN -100
 #define DATA_MAX 100
 #define NEG_INF (DATA_MIN - 1)
@@ -11,25 +11,25 @@
 
 #define NODE_ID int
 
-// Gets a node from an id. Use this everywhere.
+/* Gets a node from an id. Use this everywhere. */
 #define NODE(id) (nodes[(id)])
 
-#define CHECK_NODE_VALID(id) assert(id >= 0 && id < NUM_NODES &&       \
+#define CHECK_NODE_VALID(id) assert(id >= 0 && id < NUM_NODES && \
                                     NODE(id).this == id)
 
 #define ASSERT_VALID_DATA(dat) assert(DATA_MIN <= (dat) && DATA_MAX >= (dat))
 
-// Waits for the list to be initialized. Must do this before performing actions.
+/* Waits for the list to be initialized. Must do this before performing actions. */
 #define WAIT_FOR_INITIALIZATION  \
     do                           \
         :: initialized -> break; \
         :: else -> skip;         \
     od
 
-// Use this to stop the simulation.
+/* Use this to stop the simulation. */
 #define SHUTDOWN() shutdown = true
 
-#define DESTROY_INVALID_NODE(id)  \                         \
+#define DESTROY_INVALID_NODE(id)  \
     assert(NODE(id).this == id);  \
     node_gen!id
 
@@ -37,7 +37,7 @@
     CHECK_NODE_VALID(id);         \
     DESTROY_INVALID_NODE(id)
 
-// uninitialized link
+/* uninitialized link */
 #define NIL -1
 
 typedef Node {
@@ -49,16 +49,18 @@ typedef Node {
 
 Node nodes[NUM_NODES];
 
-// Each process will read from this to get a Node
+/* Each process will read from this to get a Node */
 chan node_gen = [NUM_NODES] of { NODE_ID };
 
-// Head & tail
+/* Head & tail */
 NODE_ID head = 0;
 NODE_ID tail = (NUM_NODES - 1);
 bool initialized = false;
 bool shutdown = false;
 
-// This process fills the node_gen and initialized head and tail. It must be run by init in whatever test we use.
+/* This process fills the node_gen and initialized head and tail.
+ * It must be run by init in whatever test we use. 
+ */
 proctype init_nodes() {
     assert(!initialized);
     NODE_ID cur = 0;
@@ -81,8 +83,8 @@ proctype init_nodes() {
     initialized = true;
 }
 
-// Will search for the value, checking consistancy as it goes.
-// Will not return anything...
+/* Will search for the value, checking consistancy as it goes.
+ * Will not return anything... */
 proctype search(int value, bool sorted) {
     ASSERT_VALID_DATA(value);
     WAIT_FOR_INITIALIZATION;
