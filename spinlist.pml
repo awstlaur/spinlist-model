@@ -76,8 +76,9 @@ proctype init_nodes() {
         node_gen!cur;
     }
 
-    // ?? pulls the id out no mater its place.
-    // Used so that head is 0 and tail is NUM_NODES - 1
+    /* ?? pulls the id out no mater its place.
+     * Used so that head is 0 and tail is NUM_NODES - 1
+     */
     node_gen??eval(head);
     node_gen??eval(tail);
 
@@ -97,30 +98,72 @@ proctype search(int value, bool sorted) {
     // TODO allight
 }
 
+/* if our representation is "full"
+ *   (i.e., we have NUM_NODES elements),
+ *   push will just do nothing.
+ */
 proctype push(int value){
+
     ASSERT_VALID_DATA(value);
     WAIT_FOR_INITIALIZATION;
-    // TODO awstlaur
+
+    if
+        :: (count < NUM_NODES) ->
+            /* TODO awstlaur:
+             * push element
+             * adjust links
+             * count++
+             */
+        :: (count >= NUM_NODES) -> skip
+    fi
+    
 }
 
-proctype pop(){
-    // TODO awstlaur
-}
-
+/* if our representation is "full"
+ *   (i.e., we have NUM_NODES elements),
+ *   append will just do nothing.
+ */
 proctype append(int value){
-    // TODO awstlaur
+
+    ASSERT_VALID_DATA(value);
+    WAIT_FOR_INITIALIZATION;
+
+    if
+        :: (count < NUM_NODES) ->
+            /* TODO awstlaur:
+             * append element
+             * adjust links
+             * count++
+             */
+        :: (count >= NUM_NODES) -> skip
+    fi
+    
+}
+
+/* removes the "head" element
+ *   from the list
+ */
+proctype pop(){
+
+    WAIT_FOR_INITIALIZATION;
+
+    /* TODO awstlaur:
+     * pop element
+     * adjust links
+     * count--
+     */
 }
 
 proctype insert_sorted(int value){
-    // TODO allight
+    /* TODO allight */
 }
 
 proctype remove_sorted(int value){
-    // TODO allight
+    /* TODO allight */
 }
 
 proctype check_sorted(){
     atomic {
-        // TODO awstlaur
+        /* TODO awstlaur */
     }
 }
