@@ -95,7 +95,7 @@ proctype init_nodes() {
 proctype search(int value, bool sorted) {
     ASSERT_VALID_DATA(value);
     WAIT_FOR_INITIALIZATION;
-    // TODO allight
+    /* TODO allight */
 }
 
 /* if our representation is "full"
@@ -164,6 +164,10 @@ proctype remove_sorted(int value){
 
 proctype check_sorted(){
     atomic {
-        /* TODO awstlaur */
+        /* TODO awstlaur 
+         * start at head, follow links
+         * for each successive pair x y,
+         *  ensure x <= y
+         */
     }
 }
