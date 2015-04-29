@@ -58,6 +58,11 @@ NODE_ID tail = (NUM_NODES - 1);
 bool initialized = false;
 bool shutdown = false;
 
+/* current number of nodes in the list 
+ * compare against NUM_NODES as needed
+ */
+int count = 0;
+
 /* This process fills the node_gen and initialized head and tail.
  * It must be run by init in whatever test we use. 
  */
@@ -80,6 +85,7 @@ proctype init_nodes() {
     NODE(head).data = NEG_INF;
     NODE(tail).data = POS_INF;
     printf("Head is node %d\nTail is node %d\n", head, tail);
+    count = 2;
     initialized = true;
 }
 
@@ -92,6 +98,8 @@ proctype search(int value, bool sorted) {
 }
 
 proctype push(int value){
+    ASSERT_VALID_DATA(value);
+    WAIT_FOR_INITIALIZATION;
     // TODO awstlaur
 }
 
