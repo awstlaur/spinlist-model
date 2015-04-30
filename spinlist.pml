@@ -232,29 +232,30 @@ proctype insert_sorted(int value){
     CHECK_NODE_VALID(curr);
 
     atomic {
-            GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
-            if
-                :: NODE(curr).data == value -> printf("%d is already in the list, skipping\n", value); goto finish;
-                :: else
-            fi
-        }
-        NODE(new_node).data = value;
-        NODE(new_node).link = curr;
-        NODE(new_node).mark = false;
-        atomic {
-            /* Make sure pred & curr have not been deleted. */
-            GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry);
-            GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
-            if
-                :: (NODE(pred).link == curr && !NODE(pred).mark && !NODE(curr).mark) ->
-                    NODE(pred).link = new_node;
-                    printf("%d inserted into list\n", value);
-                    goto finish;
-                :: else ->
-                    printf("CAS Failed, p == %d p.link == %d curr == %d pmark = %d cmark = %d\n", pred, NODE(pred).link, curr, NODE(pred).mark, NODE(curr).mark);
-                    goto retry;
-            fi
-        }
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        if
+            :: NODE(curr).data == value -> printf("%d is already in the list, skipping\n", value); goto finish;
+            :: else
+        fi
+    }
+    NODE(new_node).data = value;
+    NODE(new_node).link = curr;
+    NODE(new_node).mark = false;
+    atomic {
+        /* Make sure pred & curr have not been deleted. */
+        GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry);
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        if
+            :: (NODE(pred).link == curr && !NODE(pred).mark && !NODE(curr).mark) ->
+                NODE(pred).link = new_node;
+                printf("%d inserted into list\n", value);
+                goto finish;
+            :: else ->
+                printf("CAS Failed, p == %d p.link == %d curr == %d pmark = %d cmark = %d\n",
+                       pred, NODE(pred).link, curr, NODE(pred).mark, NODE(curr).mark);
+                goto retry;
+        fi
+    }
         
 finish:
     printf("insert of %d finished\n", value);
