@@ -12,7 +12,7 @@
 #define NODE_ID int
 
 /* Gets a node from an id. Use this everywhere. */
-#define NODE(id) (nodes[(id)])
+#define NODE(id) nodes[(id)]
 
 #define CHECK_NODE_VALID(id) assert(id >= 0 && id < NUM_NODES && \
                                     NODE(id).this == id)
@@ -20,22 +20,82 @@
 #define ASSERT_VALID_DATA(dat) assert(DATA_MIN <= (dat) && DATA_MAX >= (dat))
 
 /* Waits for the list to be initialized. Must do this before performing actions. */
-#define WAIT_FOR_INITIALIZATION  \
-    do                           \
-        :: initialized -> break; \
-        :: else -> skip;         \
-    od
+#define WAIT_FOR_INITIALIZATION() \
+    if                           \
+        :: initialized \
+    fi; \
+    assert(initialized) \
+
 
 /* Use this to stop the simulation. */
 #define SHUTDOWN() shutdown = true
 
 #define DESTROY_INVALID_NODE(id)  \
     assert(NODE(id).this == id);  \
-    node_gen!id
+    NODE(id).gen += 1;            \
+    NODE(id).mark = false;        \
+    node_gen!id;
 
 #define DESTROY_NODE(id)          \
-    CHECK_NODE_VALID(id);         \
-    DESTROY_INVALID_NODE(id)
+    atomic {                      \
+        CHECK_NODE_VALID(id);     \
+        DESTROY_INVALID_NODE(id); \
+    }
+
+#define GOTO_ON_FAIL(prop, labl) \
+    if \
+        :: !(prop) -> printf("prop failed\n"); goto labl; \
+        :: else \
+    fi
+
+#define FIND_OP(v)                                                    \
+    NODE_ID pred;                                                     \
+    int p_gen;                                                        \
+    NODE_ID curr;                                                     \
+    int c_gen;                                                        \
+    NODE_ID succ;                                                     \
+    int s_gen;                                                        \
+    bool marked = false;                                              \
+retry:                                                                \
+    pred = NIL; \
+    p_gen = NIL; \
+    curr = NIL; \
+    c_gen = NIL; \
+    succ = NIL; \
+    s_gen = NIL; \
+    /* Start of find operation. pred, cur is the window. */           \
+    atomic {                                                          \
+        pred = head;                                                  \
+        p_gen = NODE(pred).gen;                                       \
+    }                                                                 \
+    atomic {                                                          \
+        curr = NODE(pred).link;                                       \
+        c_gen = NODE(curr).gen;                                       \
+    }                                                                 \
+    /* pred == head so it should never change. */                     \
+    assert(NODE(pred).gen == 0);                                      \
+    do                                                                \
+        :: NODE(curr).data >= (v) -> \
+            atomic { \
+                printf("found node %d with data %d\n", curr, NODE(curr).data); \
+            } \
+            break;                                                    \
+        :: else ->                                                    \
+            assert(curr != tail);                                     \
+            atomic {                                                  \
+                succ = NODE(curr).link;                               \
+                GOTO_ON_FAIL(succ != NIL, retry);                     \
+                GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);         \
+                s_gen = NODE(succ).gen;                               \
+            }                                                         \
+            /* We will let remove be the only one to delete stuff. */ \
+            GOTO_ON_FAIL(NODE(succ).mark == false, retry);            \
+            pred = curr;                                              \
+            p_gen = c_gen;                                            \
+            curr = succ;                                              \
+            c_gen = s_gen;                                            \
+    od;                                                               \
+    /* End of find operation */                                       \
 
 /* uninitialized link */
 #define NIL -1
@@ -45,6 +105,11 @@ typedef Node {
     NODE_ID link;
     bool mark;
     int data;
+    /* The generation. We should check this to make sure that the node is not
+     * destroyed while we are doing a call.  We need this since we lack a
+     * tracing garbage collector
+     */
+    int gen;
 }
 
 Node nodes[NUM_NODES];
@@ -58,13 +123,13 @@ NODE_ID tail = (NUM_NODES - 1);
 bool initialized = false;
 bool shutdown = false;
 
-/* current number of nodes in the list 
+/* current number of nodes in the list
  * compare against NUM_NODES as needed
  */
 int count = 0;
 
 /* This process fills the node_gen and initialized head and tail.
- * It must be run by init in whatever test we use. 
+ * It must be run by init in whatever test we use.
  */
 proctype init_nodes() {
     assert(!initialized);
@@ -73,6 +138,7 @@ proctype init_nodes() {
         NODE(cur).this = cur;
         NODE(cur).link = NIL;
         NODE(cur).mark = false;
+        NODE(cur).gen = 0;
         node_gen!cur;
     }
 
@@ -85,6 +151,7 @@ proctype init_nodes() {
     NODE(head).link = tail;
     NODE(head).data = NEG_INF;
     NODE(tail).data = POS_INF;
+    NODE(tail).link = NIL;
     printf("Head is node %d\nTail is node %d\n", head, tail);
     count = 2;
     initialized = true;
@@ -92,9 +159,10 @@ proctype init_nodes() {
 
 /* Will search for the value, checking consistancy as it goes.
  * Will not return anything... */
-proctype search(int value, bool sorted) {
+proctype search_sorted(int value) {
     ASSERT_VALID_DATA(value);
-    WAIT_FOR_INITIALIZATION;
+
+    printf("Not yet implemented SEARCH\n");
     /* TODO allight */
 }
 
@@ -105,17 +173,16 @@ proctype search(int value, bool sorted) {
 proctype push(int value){
 
     ASSERT_VALID_DATA(value);
-    WAIT_FOR_INITIALIZATION;
 
-    if
-        :: (count < NUM_NODES) ->
-            /* TODO awstlaur:
-             * push element
-             * adjust links
-             * count++
-             */
-        :: (count >= NUM_NODES) -> skip
-    fi
+/*     if */
+/*         :: (count < NUM_NODES) -> */
+/*             /1* TODO awstlaur: */
+/*              * push element */
+/*              * adjust links */
+/*              * count++ */
+/*              *1/ */
+/*         :: (count >= NUM_NODES) -> skip */
+/*     fi */
     
 }
 
@@ -126,48 +193,85 @@ proctype push(int value){
 proctype append(int value){
 
     ASSERT_VALID_DATA(value);
-    WAIT_FOR_INITIALIZATION;
 
-    if
-        :: (count < NUM_NODES) ->
-            /* TODO awstlaur:
-             * append element
-             * adjust links
-             * count++
-             */
-        :: (count >= NUM_NODES) -> skip
-    fi
+/*     if */
+/*         :: (count < NUM_NODES) -> */
+/*             /1* TODO awstlaur: */
+/*              * append element */
+/*              * adjust links */
+/*              * count++ */
+/*              *1/ */
+/*         :: (count >= NUM_NODES) -> skip */
+/*     fi */
     
 }
 
 /* removes the "head" element
  *   from the list
  */
-proctype pop(){
+/* proctype pop(){ */
 
-    WAIT_FOR_INITIALIZATION;
 
-    /* TODO awstlaur:
-     * pop element
-     * adjust links
-     * count--
-     */
-}
+/*     /1* TODO awstlaur: */
+/*      * pop element */
+/*      * adjust links */
+/*      * count-- */
+/*      *1/ */
+/* } */
 
 proctype insert_sorted(int value){
-    /* TODO allight */
-}
+    ASSERT_VALID_DATA(value);
+    NODE_ID new_node;
 
-proctype remove_sorted(int value){
-    /* TODO allight */
-}
+    /* Get a new node which will be inserted. This will block until one is availible. */
+    node_gen?new_node;
 
-proctype check_sorted(){
+    FIND_OP(value);
+
+    CHECK_NODE_VALID(pred);
+    CHECK_NODE_VALID(curr);
+
     atomic {
-        /* TODO awstlaur 
-         * start at head, follow links
-         * for each successive pair x y,
-         *  ensure x <= y
-         */
-    }
+            GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+            if
+                :: NODE(curr).data == value -> printf("%d is already in the list, skipping\n", value); goto finish;
+                :: else
+            fi
+        }
+        NODE(new_node).data = value;
+        NODE(new_node).link = curr;
+        NODE(new_node).mark = false;
+        atomic {
+            /* Make sure pred & curr have not been deleted. */
+            GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry);
+            GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+            if
+                :: (NODE(pred).link == curr && !NODE(pred).mark && !NODE(curr).mark) ->
+                    NODE(pred).link = new_node;
+                    printf("%d inserted into list\n", value);
+                    goto finish;
+                :: else ->
+                    printf("CAS Failed, p == %d p.link == %d curr == %d pmark = %d cmark = %d\n", pred, NODE(pred).link, curr, NODE(pred).mark, NODE(curr).mark);
+                    goto retry;
+            fi
+        }
+        
+finish:
+    printf("insert of %d finished\n", value);
 }
+
+/* proctype remove_sorted(int value) { */
+/*     /1* TODO allight *1/ */
+/* } */
+
+/* proctype check_sorted() { */
+/*     atomic { */
+/*         /1* TODO awstlaur */ 
+/*          * start at head, follow links */
+/*          * for each successive pair x y, */
+/*          *  ensure x <= y */
+/*          *1/ */
+/*     } */
+/* } */
+
+
