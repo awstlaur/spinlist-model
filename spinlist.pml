@@ -123,11 +123,6 @@ NODE_ID tail = (NUM_NODES - 1);
 bool initialized = false;
 bool shutdown = false;
 
-/* current number of nodes in the list
- * compare against NUM_NODES as needed
- */
-int count = 0;
-
 /* This process fills the node_gen and initialized head and tail.
  * It must be run by init in whatever test we use.
  */
@@ -173,16 +168,6 @@ proctype search_sorted(int value) {
 proctype push(int value){
 
     ASSERT_VALID_DATA(value);
-
-/*     if */
-/*         :: (count < NUM_NODES) -> */
-/*             /1* TODO awstlaur: */
-/*              * push element */
-/*              * adjust links */
-/*              * count++ */
-/*              *1/ */
-/*         :: (count >= NUM_NODES) -> skip */
-/*     fi */
     
 }
 
@@ -193,16 +178,6 @@ proctype push(int value){
 proctype append(int value){
 
     ASSERT_VALID_DATA(value);
-
-/*     if */
-/*         :: (count < NUM_NODES) -> */
-/*             /1* TODO awstlaur: */
-/*              * append element */
-/*              * adjust links */
-/*              * count++ */
-/*              *1/ */
-/*         :: (count >= NUM_NODES) -> skip */
-/*     fi */
     
 }
 
@@ -210,12 +185,9 @@ proctype append(int value){
  *   from the list
  */
 /* proctype pop(){ */
-
-
 /*     /1* TODO awstlaur: */
 /*      * pop element */
 /*      * adjust links */
-/*      * count-- */
 /*      *1/ */
 /* } */
 
