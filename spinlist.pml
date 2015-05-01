@@ -28,12 +28,12 @@
 
 
 /* Use this to stop the simulation. */
-#define SHUTDOWN() shutdown = true
 
 #define DESTROY_INVALID_NODE(id)  \
     assert(NODE(id).this == id);  \
     NODE(id).gen += 1;            \
     NODE(id).mark = false;        \
+    NODE(id).link = NIL;          \
     node_gen!id;
 
 #define DESTROY_NODE(id)          \
@@ -121,7 +121,6 @@ chan node_gen = [NUM_NODES] of { NODE_ID };
 NODE_ID head = 0;
 NODE_ID tail = (NUM_NODES - 1);
 bool initialized = false;
-bool shutdown = false;
 
 /* This process fills the node_gen and initialized head and tail.
  * It must be run by init in whatever test we use.
@@ -148,7 +147,6 @@ proctype init_nodes() {
     NODE(tail).data = POS_INF;
     NODE(tail).link = NIL;
     printf("Head is node %d\nTail is node %d\n", head, tail);
-    count = 2;
     initialized = true;
 }
 
@@ -157,8 +155,13 @@ proctype init_nodes() {
 proctype search_sorted(int value) {
     ASSERT_VALID_DATA(value);
 
-    printf("Not yet implemented SEARCH\n");
-    /* TODO allight */
+    FIND_OP(value);
+    atomic {
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        if  :: NODE(curr).data == value -> printf("Found %d in node %d\n", value, curr);
+            :: else -> printf("Unable to find %d\n", value);
+        fi
+    }
 }
 
 /* if our representation is "full"
@@ -166,9 +169,7 @@ proctype search_sorted(int value) {
  *   push will just do nothing.
  */
 proctype push(int value){
-
     ASSERT_VALID_DATA(value);
-    
 }
 
 /* if our representation is "full"
@@ -176,9 +177,7 @@ proctype push(int value){
  *   append will just do nothing.
  */
 proctype append(int value){
-
     ASSERT_VALID_DATA(value);
-    
 }
 
 /* removes the "head" element
@@ -228,23 +227,60 @@ proctype insert_sorted(int value){
                 goto retry;
         fi
     }
-        
+
 finish:
     printf("insert of %d finished\n", value);
 }
 
-/* proctype remove_sorted(int value) { */
-/*     /1* TODO allight *1/ */
-/* } */
+proctype remove_sorted(int value) {
+    ASSERT_VALID_DATA(value);
 
-/* proctype check_sorted() { */
-/*     atomic { */
-/*         /1* TODO awstlaur */ 
-/*          * start at head, follow links */
-/*          * for each successive pair x y, */
-/*          *  ensure x <= y */
-/*          *1/ */
-/*     } */
-/* } */
+    FIND_OP(value);
+
+    CHECK_NODE_VALID(pred);
+    CHECK_NODE_VALID(curr);
+    assert(curr != tail);
+
+    atomic {
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        if
+            :: NODE(curr).data != value -> printf("%d is not in the list, skipping\n", value); goto finish;
+            :: else
+        fi
+    }
+    atomic {
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        succ = NODE(curr).link;
+        s_gen = NODE(succ).gen;
+    }
+finish:
+    printf("remove of %d finished\n", value);
+    /* TODO allight */
+}
+
+
+proctype check_sorted() {
+    atomic {
+        int l = 0;
+        NODE_ID cur = head;
+        bool seen[NUM_NODES];
+        int i;
+        for (i in seen) {
+            seen[i] = false;
+        };
+        do
+            :: (cur != tail)  ->
+                CHECK_NODE_VALID(cur);
+                CHECK_NODE_VALID(NODE(cur).link);
+                assert(NODE(cur).data < NODE(NODE(cur).link).data);
+                assert(!seen[cur]);
+                seen[cur] = true;
+                cur = NODE(cur).link;
+                l = l + 1;
+            :: else -> break;
+        od;
+        printf("List of length %d is currently sorted correctly\n", l - 1);
+    }
+}
 
 
