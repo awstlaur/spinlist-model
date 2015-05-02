@@ -21,17 +21,17 @@
 
 /* Waits for the list to be initialized. Must do this before performing actions. */
 #define WAIT_FOR_INITIALIZATION() \
-    if                           \
-        :: initialized \
-    fi; \
-    assert(initialized) \
+    if                            \
+        :: initialized            \
+    fi;                           \
+    assert(initialized)           \
 
 
 /* Use this to stop the simulation. */
 
 #define DESTROY_INVALID_NODE(id)  \
     assert(NODE(id).this == id);  \
-    NODE(id).gen += 1;            \
+    NODE(id).gen++;               \
     NODE(id).mark = false;        \
     NODE(id).link = NIL;          \
     node_gen!id;
@@ -42,10 +42,10 @@
         DESTROY_INVALID_NODE(id); \
     }
 
-#define GOTO_ON_FAIL(prop, labl) \
-    if \
-        :: !(prop) -> printf("prop failed\n"); goto labl; \
-        :: else \
+#define GOTO_ON_FAIL(prop, labl)                                        \
+    if                                                                  \
+        :: !(prop) -> printf("prop %d failed\n", __LINE__ ); goto labl; \
+        :: else                                                         \
     fi
 
 #define FIND_OP(v)                                                    \
@@ -57,12 +57,12 @@
     int s_gen;                                                        \
     bool marked = false;                                              \
 retry:                                                                \
-    pred = NIL; \
-    p_gen = NIL; \
-    curr = NIL; \
-    c_gen = NIL; \
-    succ = NIL; \
-    s_gen = NIL; \
+    pred = NIL;                                                       \
+    p_gen = NIL;                                                      \
+    curr = NIL;                                                       \
+    c_gen = NIL;                                                      \
+    succ = NIL;                                                       \
+    s_gen = NIL;                                                      \
     /* Start of find operation. pred, cur is the window. */           \
     atomic {                                                          \
         pred = head;                                                  \
@@ -75,10 +75,13 @@ retry:                                                                \
     /* pred == head so it should never change. */                     \
     assert(NODE(pred).gen == 0);                                      \
     do                                                                \
-        :: NODE(curr).data >= (v) -> \
-            atomic { \
-                printf("found node %d with data %d\n", curr, NODE(curr).data); \
-            } \
+        :: NODE(curr).mark -> goto retry;                             \
+        :: NODE(curr).data >= (v) ->                                  \
+            atomic {                                                  \
+                GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);         \
+                printf("found node %d with data %d\n",                \
+                        curr, NODE(curr).data);                       \
+            }                                                         \
             break;                                                    \
         :: else ->                                                    \
             assert(curr != tail);                                     \
@@ -89,7 +92,6 @@ retry:                                                                \
                 s_gen = NODE(succ).gen;                               \
             }                                                         \
             /* We will let remove be the only one to delete stuff. */ \
-            GOTO_ON_FAIL(NODE(succ).mark == false, retry);            \
             pred = curr;                                              \
             p_gen = c_gen;                                            \
             curr = succ;                                              \
@@ -115,7 +117,7 @@ typedef Node {
 Node nodes[NUM_NODES];
 
 /* Each process will read from this to get a Node */
-chan node_gen = [NUM_NODES] of { NODE_ID };
+chan node_gen = [NUM_NODES - 2] of { NODE_ID };
 
 /* Head & tail */
 NODE_ID head = 0;
@@ -133,14 +135,14 @@ proctype init_nodes() {
         NODE(cur).link = NIL;
         NODE(cur).mark = false;
         NODE(cur).gen = 0;
-        node_gen!cur;
+        if  :: cur != head && cur != tail -> node_gen!cur;
+            :: else;
+        fi;
     }
 
     /* ?? pulls the id out no mater its place.
      * Used so that head is 0 and tail is NUM_NODES - 1
      */
-    node_gen??eval(head);
-    node_gen??eval(tail);
 
     NODE(head).link = tail;
     NODE(head).data = NEG_INF;
@@ -196,6 +198,7 @@ proctype insert_sorted(int value){
 
     /* Get a new node which will be inserted. This will block until one is availible. */
     node_gen?new_node;
+    assert(NODE(new_node).link == NIL);
 
     FIND_OP(value);
 
@@ -239,7 +242,6 @@ proctype remove_sorted(int value) {
 
     CHECK_NODE_VALID(pred);
     CHECK_NODE_VALID(curr);
-    assert(curr != tail);
 
     atomic {
         GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
@@ -248,10 +250,30 @@ proctype remove_sorted(int value) {
             :: else
         fi
     }
+    // Get the successor
     atomic {
-        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, finish);
         succ = NODE(curr).link;
         s_gen = NODE(succ).gen;
+    }
+    // Do the marking.
+    atomic {
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        if  :: !(NODE(curr).mark) && NODE(curr).link == succ && NODE(succ).gen == s_gen -> NODE(curr).mark = true;
+            :: NODE(curr).mark && NODE(curr).link == succ && NODE(succ).gen == s_gen -> goto finish;
+            :: else -> printf("marking failed for remove of %d\n", value); goto retry;
+        fi;
+    }
+    atomic {
+        GOTO_ON_FAIL(NODE(succ).gen == s_gen, retry);
+        GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry);
+        GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);
+        GOTO_ON_FAIL(!NODE(pred).mark, retry);
+        if  :: NODE(pred).link == curr -> NODE(pred).link = succ;
+            :: else -> goto finish;
+        fi;
+
+        DESTROY_NODE(curr);
     }
 finish:
     printf("remove of %d finished\n", value);
@@ -272,6 +294,7 @@ proctype check_sorted() {
             :: (cur != tail)  ->
                 CHECK_NODE_VALID(cur);
                 CHECK_NODE_VALID(NODE(cur).link);
+                /* printf("checking node %d, next is %d\n", cur, NODE(cur).link); */
                 assert(NODE(cur).data < NODE(NODE(cur).link).data);
                 assert(!seen[cur]);
                 seen[cur] = true;
