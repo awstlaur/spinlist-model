@@ -195,17 +195,24 @@ proctype append(int value){
 
     NODE_ID id;
     node_gen?id;
+    CHECK_NODE_VALID(id);
+    /* TODO (awstlaur)
+     * finish */
 }
 
 /* removes the "head" element
  *   from the list
  */
-/* proctype pop(){ */
-/*     /1* TODO awstlaur: */
-/*      * pop element */
-/*      * adjust links */
-/*      *1/ */
-/* } */
+proctype pop(){
+     NODE_ID prev_head = head;
+     head = head.link;
+     DESTROY_NODE(prev_head);
+     /* TODO (awstlaur)
+      * can't think of what else a.t.m.
+      * besides, maybe, using an
+      * atomic block if needed?
+      */
+}
 
 proctype insert_sorted(int value){
     ASSERT_VALID_DATA(value);
