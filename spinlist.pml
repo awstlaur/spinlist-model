@@ -164,20 +164,37 @@ proctype search_sorted(int value) {
     }
 }
 
-/* if our representation is "full"
- *   (i.e., we have NUM_NODES elements),
- *   push will just do nothing.
+/* pushes a new node onto the list.
+ * new node becomes head.
  */
 proctype push(int value){
+
     ASSERT_VALID_DATA(value);
+
+    NODE_ID id;
+    node_gen?id;
+    CHECK_NODE_VALID(id);
+
+    NODE(id).data = value;
+
+    NODE_ID prev_head = head;
+    NODE(id).link = prev_head;
+    head = NODE(id).this;
+
+    /* TODO (awstlaur)
+     * what needs to be in an atomic block?
+     */    
+
 }
 
-/* if our representation is "full"
- *   (i.e., we have NUM_NODES elements),
- *   append will just do nothing.
+/* puts a new node at the end of the list.
+ * new node becomes tail.
  */
 proctype append(int value){
     ASSERT_VALID_DATA(value);
+
+    NODE_ID id;
+    node_gen?id;
 }
 
 /* removes the "head" element
