@@ -205,16 +205,17 @@ proctype append(int value){
 /* removes the "head" element
  *   from the list
  */
-proctype pop(){
-     NODE_ID prev_head = head;
-     head = head.link;
-     DESTROY_NODE(prev_head);
-     /* TODO (awstlaur)
-      * can't think of what else a.t.m.
-      * besides, maybe, using an
-      * atomic block if needed?
-      */
-}
+/* proctype pop(){ */
+/*     // LOOK AT LOCK FREE QUEUE CHAPTER. Also head is never removed. You remove NODE(head).link unless that is tail. */
+/*      //NODE_ID prev_head = head; */
+/*      //head = head.link; */
+/*      //DESTROY_NODE(prev_head); */
+/*      /1* TODO (awstlaur) */
+/*       * can't think of what else a.t.m. */
+/*       * besides, maybe, using an */
+/*       * atomic block if needed? */
+/*       *1/ */
+/* } */
 
 proctype insert_sorted(int value){
     ASSERT_VALID_DATA(value);
