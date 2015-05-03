@@ -182,6 +182,7 @@ retry_push:
     NODE(id).link = NODE(head).link;
     atomic {
         GOTO_ON_FAIL(!NODE(head).link.mark, retry_push);
+        GOTO_ON_FAIL((NODE(id).link.gen == NODE(head).link.gen), retry_push);
         NODE(head).link; = NODE(id).this;
     }
 
@@ -191,13 +192,33 @@ retry_push:
  * new node becomes tail.
  */
 proctype append(int value){
+
     ASSERT_VALID_DATA(value);
 
     NODE_ID id;
     node_gen?id;
     CHECK_NODE_VALID(id);
-    /* TODO (awstlaur)
-     * finish */
+
+retry_append:    
+    /* find the tail, store id in curr. 
+     * NODE(pred).link -> tail
+     */
+    FIND_OP(POS_INF);
+    /* because NODE(curr) is the tail */
+    assert(NODE(curr).gen == 0);
+
+    CHECK_NODE_VALID(pred);
+    CHECK_NODE_VALID(curr);
+
+    NODE(pred).link = NODE(id).this;
+
+    atomic {
+        GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry_append);
+        GOTO_ON_FAIL(!NODE(pred).mark, retry_append);      
+        NODE(id).link = tail;
+    }
+
+
 }
 
 /* removes the "head" element
