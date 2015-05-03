@@ -177,6 +177,7 @@ proctype push(int value){
     node_gen?id;
     CHECK_NODE_VALID(id);
     NODE(id).data = value;
+    NODE(id).mark = false;
 
 retry_push:
     NODE(id).link = NODE(head).link;
@@ -198,6 +199,8 @@ proctype append(int value){
     NODE_ID id;
     node_gen?id;
     CHECK_NODE_VALID(id);
+    NODE(id).data = value;
+    NODE(id).mark = false;
 
 retry_append:    
     /* find the tail, store id in curr. 
@@ -221,20 +224,52 @@ retry_append:
 
 }
 
-/* removes the "head" element
- *   from the list
+/* removes the "head" element from the list.
+ * blocks until the list is non-empty.
  */
-/* proctype pop(){ */
-/*     // LOOK AT LOCK FREE QUEUE CHAPTER. Also head is never removed. You remove NODE(head).link unless that is tail. */
-/*      //NODE_ID prev_head = head; */
-/*      //head = head.link; */
-/*      //DESTROY_NODE(prev_head); */
-/*      /1* TODO (awstlaur) */
-/*       * can't think of what else a.t.m. */
-/*       * besides, maybe, using an */
-/*       * atomic block if needed? */
-/*       *1/ */
-/* } */
+proctype pop(){
+retry_pop:
+    if
+        :: NODE(head).link != tail ->
+            NODE_ID curr;
+            NODE_ID succ;
+            atomic {
+                curr = NODE(head).link;
+                c_gen = NODE(curr).gen
+            }
+            
+            atomic {
+                GOTO_ON_FAIL(NODE(curr).gen == c_gen, finish_pop);
+                succ = NODE(head).link;
+                s_gen = NODE(succ).gen;
+            }
+
+            atomic {
+                GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
+                if  :: !(NODE(curr).mark) && NODE(curr).link == succ && NODE(succ).gen == s_gen -> 
+                        NODE(curr).mark = true;
+                    :: NODE(curr).mark && NODE(curr).link == succ && NODE(succ).gen == s_gen -> 
+                        goto finish_pop;
+                    :: else -> 
+                        printf("marking failed for pop (of node w/value %d)", curr.value); 
+                        goto retry_pop;
+                fi;
+            }
+            atomic {
+                GOTO_ON_FAIL(NODE(succ).gen == s_gen, retry_pop);
+                GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
+                GOTO_ON_FAIL(!NODE(pred).mark, retry_pop);
+                if  :: NODE(head).link == curr -> NODE(head).link = succ;
+                    :: else -> goto finish;
+                fi;
+
+                DESTROY_NODE(curr);
+            }
+    fi;
+
+finish_pop:
+    printf("pop finished");
+}
 
 proctype insert_sorted(int value){
     ASSERT_VALID_DATA(value);
