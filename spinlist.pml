@@ -182,9 +182,9 @@ proctype push(int value){
 retry_push:
     NODE(id).link = NODE(head).link;
     atomic {
-        GOTO_ON_FAIL(!NODE(head).link.mark, retry_push);
-        GOTO_ON_FAIL((NODE(id).link.gen == NODE(head).link.gen), retry_push);
-        NODE(head).link; = NODE(id).this;
+        GOTO_ON_FAIL(!NODE(NODE(head).link).mark, retry_push);
+        GOTO_ON_FAIL((NODE(NODE(id).link).gen == NODE(NODE(head).link).gen), retry_push);
+        NODE(head).link = NODE(id).this;
     }
 
 }
@@ -202,7 +202,7 @@ proctype append(int value){
     NODE(id).data = value;
     NODE(id).mark = false;
 
-retry_append:    
+/*retry:*/  
     /* find the tail, store id in curr. 
      * NODE(pred).link -> tail
      */
@@ -216,8 +216,8 @@ retry_append:
     NODE(pred).link = NODE(id).this;
 
     atomic {
-        GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry_append);
-        GOTO_ON_FAIL(!NODE(pred).mark, retry_append);      
+        GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry);
+        GOTO_ON_FAIL(!NODE(pred).mark, retry);      
         NODE(id).link = tail;
     }
 
@@ -233,9 +233,12 @@ retry_pop:
         :: NODE(head).link != tail ->
             NODE_ID curr;
             NODE_ID succ;
+            int c_gen;
+            int s_gen;
+
             atomic {
                 curr = NODE(head).link;
-                c_gen = NODE(curr).gen
+                c_gen = NODE(curr).gen;
             }
             
             atomic {
@@ -251,16 +254,15 @@ retry_pop:
                     :: NODE(curr).mark && NODE(curr).link == succ && NODE(succ).gen == s_gen -> 
                         goto finish_pop;
                     :: else -> 
-                        printf("marking failed for pop (of node w/value %d)", curr.value); 
+                        printf("marking failed for pop (of node w/value %d)", NODE(curr).data); 
                         goto retry_pop;
                 fi;
             }
             atomic {
                 GOTO_ON_FAIL(NODE(succ).gen == s_gen, retry_pop);
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
-                GOTO_ON_FAIL(!NODE(pred).mark, retry_pop);
                 if  :: NODE(head).link == curr -> NODE(head).link = succ;
-                    :: else -> goto finish;
+                    :: else -> goto finish_pop;
                 fi;
 
                 DESTROY_NODE(curr);
