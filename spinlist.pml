@@ -24,7 +24,7 @@
     if                            \
         :: initialized            \
     fi;                           \
-    assert(initialized)           \
+    assert(initialized)        atomic   \
 
 
 /* Use this to stop the simulation. */
@@ -176,16 +176,14 @@ proctype push(int value){
     NODE_ID id;
     node_gen?id;
     CHECK_NODE_VALID(id);
-
     NODE(id).data = value;
 
-    NODE_ID prev_head = head;
-    NODE(id).link = prev_head;
-    head = NODE(id).this;
-
-    /* TODO (awstlaur)
-     * what needs to be in an atomic block?
-     */    
+retry_push:
+    NODE(id).link = NODE(head).link;
+    atomic {
+        GOTO_ON_FAIL(!NODE(head).link.mark, retry_push);
+        NODE(head).link; = NODE(id).this;
+    }
 
 }
 
