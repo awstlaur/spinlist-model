@@ -7,10 +7,16 @@ init {
     WAIT_FOR_INITIALIZATION();
 
     run push(11);
-   
+
 }
 
-ltl list_empty {
+/*active proctype monitor(){
+    atomic{
+        NODE(head).link == NIL -> assert(false)
+    }
+}*/
+
+ltl datum_exists {
     always ( eventually (
         NODE(NODE(head).link).data == 11
     ))

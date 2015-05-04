@@ -130,14 +130,15 @@ bool initialized = false;
 proctype init_nodes() {
     assert(!initialized);
     NODE_ID cur = 0;
-    for (cur in nodes) {
+    for (cur : (head + 1) .. (tail - 1)) {
         NODE(cur).this = cur;
         NODE(cur).link = NIL;
         NODE(cur).mark = false;
         NODE(cur).gen = 0;
-        if  :: cur != head && cur != tail -> node_gen!cur;
+        node_gen!cur;
+        /*if  :: cur != head && cur != tail -> node_gen!cur;
             :: else;
-        fi;
+        fi;*/
     }
 
     /* ?? pulls the id out no mater its place.
@@ -182,9 +183,15 @@ proctype push(int value){
 retry_push:
     NODE(id).link = NODE(head).link;
     atomic {
+        /*assert(NODE(id).link != NIL); */
         GOTO_ON_FAIL(!NODE(NODE(head).link).mark, retry_push);
         GOTO_ON_FAIL((NODE(NODE(id).link).gen == NODE(NODE(head).link).gen), retry_push);
         NODE(head).link = NODE(id).this;
+        printf("push(%d) finished\n", value);
+        //int i;
+        //for (i in nodes) {
+        //    printf("nodes[%d].data = %d\n", i, nodes[i].data)
+        //}
     }
 
 }
@@ -219,6 +226,7 @@ proctype append(int value){
         GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry);
         GOTO_ON_FAIL(!NODE(pred).mark, retry);      
         NODE(id).link = tail;
+        printf("append(%d) finished", value);
     }
 
 
@@ -254,7 +262,7 @@ retry_pop:
                     :: NODE(curr).mark && NODE(curr).link == succ && NODE(succ).gen == s_gen -> 
                         goto finish_pop;
                     :: else -> 
-                        printf("marking failed for pop (of node w/value %d)", NODE(curr).data); 
+                        printf("marking failed for pop (of node w/value %d)\n", NODE(curr).data); 
                         goto retry_pop;
                 fi;
             }
@@ -270,7 +278,7 @@ retry_pop:
     fi;
 
 finish_pop:
-    printf("pop finished");
+    printf("pop finished\n");
 }
 
 proctype insert_sorted(int value){
