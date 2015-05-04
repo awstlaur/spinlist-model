@@ -17,7 +17,7 @@ init {
 
 ltl pushed_gets_popped {
     always ( eventually (
-        NODE(NODE(head).link).data == 22
+        NODE(NODE(head).link).data == 22 || NODE(NODE(head).link).data == 21
         /*|| NODE(NODE(head).link).data == 13*/
     ))
 }

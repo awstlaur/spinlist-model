@@ -8,8 +8,6 @@ init {
 
     run push(21);
     run push(21);
-    run push(21);
-    run pop();
     run pop();
 
 

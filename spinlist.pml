@@ -66,19 +66,24 @@ retry:                                                                \
     s_gen = NIL;                                                      \
     /* Start of find operation. pred, cur is the window. */           \
     atomic {                                                          \
+        printf("FIND_OP atomic block 1\n");                           \
         pred = head;                                                  \
         p_gen = NODE(pred).gen;                                       \
     }                                                                 \
     atomic {                                                          \
+        printf("FIND_OP atomic block 2\n");                           \
         curr = NODE(pred).link;                                       \
         c_gen = NODE(curr).gen;                                       \
+        printf("(FIND_OP) curr = %d, pred = %d\n", curr, pred);       \
     }                                                                 \
     /* pred == head so it should never change. */                     \
     assert(NODE(pred).gen == 0);                                      \
     do                                                                \
-        :: NODE(curr).mark -> goto retry;                             \
+        :: NODE(curr).mark -> printf("NODE(%d).mark = true\n", curr); \
+            goto retry;                                               \
         :: NODE(curr).data >= (v) ->                                  \
             atomic {                                                  \
+                printf("FIND_OP atomic block 3\n");                   \
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);         \
                 printf("found node %d with data %d\n",                \
                         curr, NODE(curr).data);                       \
@@ -87,6 +92,7 @@ retry:                                                                \
         :: else ->                                                    \
             assert(curr != tail);                                     \
             atomic {                                                  \
+                printf("FIND_OP atomic block 4\n");                   \
                 succ = NODE(curr).link;                               \
                 GOTO_ON_FAIL(succ != NIL, retry);                     \
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry);         \
@@ -188,7 +194,7 @@ proctype push(int value){
 retry_push:
     NODE(id).link = NODE(head).link;
     atomic {
-        /*assert(NODE(id).link != NIL); */
+        printf("(push) atomic block 1\n")
         GOTO_ON_FAIL(NODE(id).link == NODE(head).link, retry_push);
         GOTO_ON_FAIL(!NODE(NODE(head).link).mark, retry_push);
         GOTO_ON_FAIL((NODE(NODE(id).link).gen == NODE(NODE(head).link).gen), retry_push);
@@ -233,10 +239,15 @@ proctype append(int value){
     NODE(pred).link = NODE(id).this;
 
     atomic {
+        printf("(append) atomic block 1\n")
         GOTO_ON_FAIL(NODE(pred).gen == p_gen, retry);
         GOTO_ON_FAIL(!NODE(pred).mark, retry);      
         NODE(id).link = tail;
         printf("append(%d) finished", value);
+        int i;
+        for (i in nodes) {
+            printf("(append)    nodes[%d].link = %d\n", i, nodes[i].link)
+        }
     }
 
 
@@ -246,8 +257,8 @@ proctype append(int value){
  * blocks until the list is non-empty.
  */
 proctype pop(){
-retry_pop:
     printf("pop start\n");
+retry_pop:    
     if
         :: NODE(head).link != tail ->
             NODE_ID curr;
@@ -256,20 +267,24 @@ retry_pop:
             int s_gen;
 
             atomic {
+                printf("(pop) atomic block 1\n")
                 curr = NODE(head).link;
                 c_gen = NODE(curr).gen;
                 printf("(pop) curr = %d\n", curr);
             }
             
             atomic {
+                printf("(pop) atomic block 2\n")
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, finish_pop);
                 succ = NODE(curr).link;
                 printf("(pop) succ = %d\n", succ);
-                GOTO_ON_FAIL(NODE(curr).this == tail, retry_pop);
+                /*printf("NODE(curr).this = %d ::: NODE(tail).this = %d\n", NODE(curr).this, NODE(tail).this)*/
+                GOTO_ON_FAIL(NODE(curr).this != NODE(tail).this, retry_pop);
                 s_gen = NODE(succ).gen;
             }
 
             atomic {
+                printf("(pop) atomic block 3\n")
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
                 GOTO_ON_FAIL(NODE(succ).gen == s_gen, retry_pop);
                 printf("(pop) marking phase:\n");
@@ -287,6 +302,7 @@ retry_pop:
                 fi;
             }
             atomic {
+                printf("(pop) atomic block 4\n")
                 GOTO_ON_FAIL(NODE(succ).gen == s_gen, retry_pop);
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
                 printf("(pop) destroy phase:\n");
