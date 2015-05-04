@@ -7,14 +7,13 @@ init {
     WAIT_FOR_INITIALIZATION();
 
     run push(11);
+    run push(11);
+    run push(11);
+    run pop();
+    run pop();
+
 
 }
-
-/*active proctype monitor(){
-    atomic{
-        NODE(head).link == NIL -> assert(false)
-    }
-}*/
 
 ltl datum_exists {
     always ( eventually (
