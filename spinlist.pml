@@ -145,6 +145,9 @@ proctype init_nodes() {
      * Used so that head is 0 and tail is NUM_NODES - 1
      */
 
+    NODE(head).this = head;
+    NODE(tail).this = tail;
+
     NODE(head).link = tail;
     NODE(head).data = NEG_INF;
     NODE(tail).data = POS_INF;
@@ -177,6 +180,7 @@ proctype push(int value){
     NODE_ID id;
     node_gen?id;
     CHECK_NODE_VALID(id);
+    printf("(push) new node id = %d\n", id);
     NODE(id).data = value;
     NODE(id).mark = false;
 
@@ -200,12 +204,14 @@ retry_push:
  * new node becomes tail.
  */
 proctype append(int value){
+    atomic{printf("append(%d) starting\n", value);}
 
     ASSERT_VALID_DATA(value);
 
     NODE_ID id;
-    node_gen?id;
+    node_gen?id;    
     CHECK_NODE_VALID(id);
+    printf("(append) new node id = %d\n", id);
     NODE(id).data = value;
     NODE(id).mark = false;
 
@@ -216,6 +222,8 @@ proctype append(int value){
     FIND_OP(POS_INF);
     /* because NODE(curr) is the tail */
     assert(NODE(curr).gen == 0);
+    printf("(append) FIND_OP gives curr: %d\n", curr);
+    printf("(append) FIND_OP gives pred: %d\n", pred);
 
     CHECK_NODE_VALID(pred);
     CHECK_NODE_VALID(curr);
@@ -251,13 +259,18 @@ retry_pop:
             
             atomic {
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, finish_pop);
-                succ = NODE(head).link;
+                succ = NODE(curr).link;
                 s_gen = NODE(succ).gen;
             }
 
             atomic {
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
-                if  :: !(NODE(curr).mark) && NODE(curr).link == succ && NODE(succ).gen == s_gen -> 
+                printf("(pop) marking phase:\n");
+                printf("(pop)     curr = %d, curr.mark = %d, curr.link = %d\n", curr, NODE(curr).mark, NODE(curr).link);
+                printf("(pop)     succ = %d, succ.mark = %d\n", succ, NODE(succ).mark);
+                printf("(pop)     curr.gen, = %d, c_gen = %d\n", NODE(curr).gen, c_gen);
+                printf("(pop)     succ.gen, = %d, s_gen = %d\n", NODE(succ).gen, s_gen);
+                if  :: !(NODE(curr).mark) && (NODE(curr).link == succ) && (NODE(succ).gen == s_gen) -> 
                         NODE(curr).mark = true;
                     :: NODE(curr).mark && NODE(curr).link == succ && NODE(succ).gen == s_gen -> 
                         goto finish_pop;
@@ -269,6 +282,11 @@ retry_pop:
             atomic {
                 GOTO_ON_FAIL(NODE(succ).gen == s_gen, retry_pop);
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
+                printf("(pop) destroy phase:\n");
+                printf("(pop)     curr = %d, curr.mark = %d, curr.link = %d\n", curr, NODE(curr).mark, NODE(curr).link);
+                printf("(pop)     succ = %d, succ.mark = %d\n", succ, NODE(succ).mark);
+                printf("(pop)     curr.gen, = %d, c_gen = %d\n", NODE(curr).gen, c_gen);
+                printf("(pop)     succ.gen, = %d, s_gen = %d\n", NODE(succ).gen, s_gen);
                 if  :: NODE(head).link == curr -> NODE(head).link = succ;
                     :: else -> goto finish_pop;
                 fi;
