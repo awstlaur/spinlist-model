@@ -24,7 +24,7 @@
     if                            \
         :: initialized            \
     fi;                           \
-    assert(initialized)        atomic   \
+    assert(initialized)           \
 
 
 /* Use this to stop the simulation. */
