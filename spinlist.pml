@@ -34,6 +34,7 @@
     NODE(id).gen++;               \
     NODE(id).mark = false;        \
     NODE(id).link = NIL;          \
+    NODE(id).data = 0;            \
     node_gen!id;
 
 #define DESTROY_NODE(id)          \
@@ -188,14 +189,15 @@ retry_push:
     NODE(id).link = NODE(head).link;
     atomic {
         /*assert(NODE(id).link != NIL); */
+        GOTO_ON_FAIL(NODE(id).link == NODE(head).link, retry_push);
         GOTO_ON_FAIL(!NODE(NODE(head).link).mark, retry_push);
         GOTO_ON_FAIL((NODE(NODE(id).link).gen == NODE(NODE(head).link).gen), retry_push);
         NODE(head).link = NODE(id).this;
         printf("push(%d) finished\n", value);
-        //int i;
-        //for (i in nodes) {
-        //    printf("nodes[%d].data = %d\n", i, nodes[i].data)
-        //}
+        int i;
+        for (i in nodes) {
+            printf("(push)    nodes[%d].link = %d\n", i, nodes[i].link)
+        }
     }
 
 }
@@ -245,6 +247,7 @@ proctype append(int value){
  */
 proctype pop(){
 retry_pop:
+    printf("pop start\n");
     if
         :: NODE(head).link != tail ->
             NODE_ID curr;
@@ -255,16 +258,20 @@ retry_pop:
             atomic {
                 curr = NODE(head).link;
                 c_gen = NODE(curr).gen;
+                printf("(pop) curr = %d\n", curr);
             }
             
             atomic {
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, finish_pop);
                 succ = NODE(curr).link;
+                printf("(pop) succ = %d\n", succ);
+                GOTO_ON_FAIL(NODE(curr).this == tail, retry_pop);
                 s_gen = NODE(succ).gen;
             }
 
             atomic {
                 GOTO_ON_FAIL(NODE(curr).gen == c_gen, retry_pop);
+                GOTO_ON_FAIL(NODE(succ).gen == s_gen, retry_pop);
                 printf("(pop) marking phase:\n");
                 printf("(pop)     curr = %d, curr.mark = %d, curr.link = %d\n", curr, NODE(curr).mark, NODE(curr).link);
                 printf("(pop)     succ = %d, succ.mark = %d\n", succ, NODE(succ).mark);
@@ -297,6 +304,10 @@ retry_pop:
 
 finish_pop:
     printf("pop finished\n");
+    int i;
+    for (i in nodes) {
+        printf("(pop)    nodes[%d].link = %d\n", i, nodes[i].link)
+    }
 }
 
 proctype insert_sorted(int value){
