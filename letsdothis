@@ -1,0 +1,4 @@
+#!/bin/bash
+spin -a $1
+make binary
+make run
